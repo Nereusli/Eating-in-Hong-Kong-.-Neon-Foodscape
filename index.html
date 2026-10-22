@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive spatial visualization of licensed food premises in Hong Kong.">
+    <title>Eating in Hong Kong II | Neon Foodscape</title>
+
+    <!-- 网络字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- 项目样式表：相对路径 -->
+    <link rel="stylesheet" href="css/style.css?v=6">
+
+    <!-- 如高德控制台提供 securityJsCode，请取消注释并替换 -->
+    <!--
+    <script>
+        window._AMapSecurityConfig = {
+            securityJsCode: "YOUR_SECURITY_CODE"
+        };
+    </script>
+    -->
+
+    <!-- 高德地图 JavaScript API 2.0 -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=3823908851b114b87b1d367217261604&plugin=AMap.Scale,AMap.ToolBar,AMap.HeatMap,AMap.MassMarks"></script>
+</head>
+<body>
+    <!-- 页面加载画面 -->
+    <div id="loading" class="loading-screen" role="status" aria-live="polite">
+        <div class="neon-loader"></div>
+        <p id="loadingText">LOADING THE HONG KONG FOODSCAPE...</p>
+    </div>
+
+    <!-- 顶部标题区 -->
+    <header class="hero">
+        <div class="hero-kicker">
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+            A WEB GIS STORY OF LICENSED FOOD PREMISES
+        </div>
+
+        <div class="hero-row">
+            <div>
+                <h1>EATING IN <span>HONG KONG</span></h1>
+                <p>VOL. II · NEON FOODSCAPE</p>
+            </div>
+            <div class="hero-caption">
+                Explore Hong Kong’s food landscape through the spatial distribution of licensed restaurants and other food premises.
+            </div>
+        </div>
+    </header>
+
+    <!-- 主工作区：数据看板 + 地图 + 控制面板 -->
+    <main class="workspace">
+        <!-- 左侧：数据看板 -->
+        <aside class="dashboard panel" aria-label="Data dashboard">
+            <div class="panel-heading">
+                <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                <span>DATA DASHBOARD</span>
+            </div>
+
+            <section class="total-card">
+                <div class="label">VISIBLE PREMISES</div>
+                <div id="totalCount" class="big-number">0</div>
+                <div class="scanline"></div>
+            </section>
+
+            <div class="metric-grid">
+                <article class="metric-card red">
+                    <i class="fa-solid fa-utensils" aria-hidden="true"></i>
+                    <strong id="restaurantCount">0</strong>
+                    <span>RESTAURANTS</span>
+                </article>
+                <article class="metric-card amber">
+                    <i class="fa-solid fa-store" aria-hidden="true"></i>
+                    <strong id="otherCount">0</strong>
+                    <span>OTHER FOOD</span>
+                </article>
+            </div>
+
+            <section class="mini-section">
+                <div class="section-label">
+                    <i class="fa-solid fa-ranking-star" aria-hidden="true"></i>
+                    TOP DISTRICTS
+                </div>
+                <div id="ranking" class="ranking"></div>
+            </section>
+
+            <section class="mini-section insight-box">
+                <div class="section-label">
+                    <i class="fa-regular fa-lightbulb" aria-hidden="true"></i>
+                    READING THE MAP
+                </div>
+                <p id="insightText">Point mode locates individual licensed premises.</p>
+            </section>
+
+            <div id="dataStatus" class="data-note" aria-live="polite">
+                Checking GeoJSON sources…
+            </div>
+        </aside>
+
+        <!-- 中间：交互地图 -->
+        <section class="map-shell panel" aria-label="Interactive map">
+            <div id="map"></div>
+            <div class="map-badge">
+                <strong id="mapModeTitle">POINT DISTRIBUTION</strong>
+                <span id="mapModeSubtitle">Individual licensed premises</span>
+            </div>
+            <div id="legend" class="map-legend"></div>
+            <div id="errorBox" class="error-box" role="alert" hidden></div>
+        </section>
+
+        <!-- 右侧：地图控制面板 -->
+        <aside class="controls panel" aria-label="Map control panel">
+            <div class="panel-heading">
+                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                <span>CONTROL PANEL</span>
+            </div>
+
+            <!-- 可视化模式 -->
+            <section class="control-group">
+                <div class="section-label">VISUALIZATION</div>
+                <div class="mode-list">
+                    <button class="mode-btn active" type="button" data-mode="points">
+                        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                        <span><b>Point Map</b><small>Individual locations</small></span>
+                    </button>
+                    <button class="mode-btn" type="button" data-mode="heat">
+                        <i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i>
+                        <span><b>Heat Map</b><small>Spatial concentration</small></span>
+                    </button>
+                    <button class="mode-btn" type="button" data-mode="bubble">
+                        <i class="fa-solid fa-circle-nodes" aria-hidden="true"></i>
+                        <span><b>Bubble Map</b><small>District magnitude</small></span>
+                    </button>
+                    <button class="mode-btn" type="button" data-mode="choropleth">
+                        <i class="fa-solid fa-map" aria-hidden="true"></i>
+                        <span><b>Choropleth</b><small>District variation</small></span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 数据图层开关 -->
+            <section class="control-group">
+                <div class="section-label">DATA LAYERS</div>
+
+                <label class="toggle-row">
+                    <input id="showRestaurants" type="checkbox" checked>
+                    <span class="toggle"></span>
+                    <i class="fa-solid fa-utensils red-icon" aria-hidden="true"></i>
+                    <span>Restaurant licences</span>
+                </label>
+
+                <label class="toggle-row">
+                    <input id="showOther" type="checkbox" checked>
+                    <span class="toggle"></span>
+                    <i class="fa-solid fa-store amber-icon" aria-hidden="true"></i>
+                    <span>Other food licences</span>
+                </label>
+
+                <!-- 新增：行政区边界及名称开关，默认开启 -->
+                <label class="toggle-row">
+                    <input id="showDistrictBase" type="checkbox" checked>
+                    <span class="toggle"></span>
+                    <i class="fa-solid fa-map-location-dot cyan-icon" aria-hidden="true"></i>
+                    <span>District boundaries &amp; names</span>
+                </label>
+            </section>
+
+            <!-- 数据筛选器 -->
+            <section class="control-group fields">
+                <label for="typeFilter">
+                    <i class="fa-solid fa-tags" aria-hidden="true"></i>
+                    LICENCE TYPE
+                    <select id="typeFilter">
+                        <option value="all">All licence types</option>
+                    </select>
+                </label>
+
+                <label for="districtFilter">
+                    <i class="fa-solid fa-city" aria-hidden="true"></i>
+                    DISTRICT
+                    <select id="districtFilter">
+                        <option value="all">All Hong Kong</option>
+                    </select>
+                </label>
+
+                <label for="metricSelect">
+                    <i class="fa-solid fa-chart-column" aria-hidden="true"></i>
+                    DISTRICT METRIC
+                    <select id="metricSelect">
+                        <option value="total">Total premises</option>
+                        <option value="restaurant">Restaurant licences</option>
+                        <option value="other">Other food licences</option>
+                        <option value="share">Restaurant share (%)</option>
+                    </select>
+                </label>
+            </section>
+
+            <!-- 分层设色符号系统 -->
+            <section id="symbologyPanel" class="control-group symbology-panel disabled">
+                <div class="section-label">
+                    <i class="fa-solid fa-palette" aria-hidden="true"></i>
+                    CHOROPLETH SYMBOLOGY
+                </div>
+
+                <label class="compact-label" for="paletteSelect">
+                    COLOUR RAMP
+                    <select id="paletteSelect">
+                        <option value="neonSunset">Neon Sunset</option>
+                        <option value="cyberTeal">Cyber Teal</option>
+                        <option value="retroGold">Retro Gold</option>
+                        <option value="magentaNight">Magenta Night</option>
+                        <option value="diverging">Teal–Amber Diverging</option>
+                    </select>
+                </label>
+
+                <label class="compact-label" for="classMethod">
+                    CLASSIFICATION
+                    <select id="classMethod">
+                        <option value="quantile">Quantile</option>
+                        <option value="equal">Equal interval</option>
+                    </select>
+                </label>
+
+                <label class="compact-label range-label" for="classCount">
+                    <span>CLASSES <b id="classCountValue">5</b></span>
+                    <input id="classCount" type="range" min="3" max="7" value="5">
+                </label>
+
+                <label class="compact-label range-label" for="fillOpacity">
+                    <span>FILL OPACITY <b id="fillOpacityValue">62%</b></span>
+                    <input id="fillOpacity" type="range" min="25" max="85" value="62">
+                </label>
+
+                <label class="compact-label range-label" for="boundaryGlow">
+                    <span>BOUNDARY GLOW <b id="glowValue">2.0</b></span>
+                    <input id="boundaryGlow" type="range" min="1" max="4" step="0.5" value="2">
+                </label>
+            </section>
+
+            <button id="resetBtn" class="reset-btn" type="button">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                RESET VIEW
+            </button>
+
+            <div class="coord-note">
+                <i class="fa-solid fa-globe" aria-hidden="true"></i>
+                <span>Source: WGS84 / EPSG:4326<br>AMap display: GCJ-02</span>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 项目 JavaScript：相对路径 -->
+    <script src="js/map.js?v=6"></script>
+</body>
+</html>
