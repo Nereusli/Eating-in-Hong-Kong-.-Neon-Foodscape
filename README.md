@@ -1,5 +1,11 @@
 # Eating in Hong Kong II · Neon Foodscape
 
+## Quuick Access
+https://nereusli.github.io/Eating-in-Hong-Kong-.-Neon-Foodscape/
+<img width="1912" height="921" alt="image" src="https://github.com/user-attachments/assets/46cf16d1-6668-451d-bce4-a111ad65c977" />
+<img width="1917" height="922" alt="image" src="https://github.com/user-attachments/assets/84e05fdf-69c1-4522-9004-5712f863a32f" />
+
+
 ## Data files
 
 - `DCD_gdb_DCD_converted.geojson` (WGS84/EPSG:4326, coordinates around 114.x, 22.x)
